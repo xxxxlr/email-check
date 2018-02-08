@@ -1,3 +1,5 @@
+# Updated: Check against all exchanges so long as one says the emails address is valid, we will consider it as valid
+
 # Email check
 
 [![David](https://img.shields.io/david/pensierinmusica/email-check.svg)](https://www.npmjs.com/package/email-check)
