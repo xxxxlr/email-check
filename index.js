@@ -6,7 +6,7 @@ var promisify = require('js-promisify');
 
 // Helper to validate email based on regex
 const EMAIL_REGEX = /^([\w-]+(?:\.[\w-]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
-const LOG_FLAG = true
+const LOG_FLAG = false
 
 function validateEmail (email) {
   if (typeof email === 'string' && email.length > 5 && email.length < 61 && EMAIL_REGEX.test(email)) {
@@ -18,7 +18,6 @@ function validateEmail (email) {
 
 // Full email check
 module.exports = function (email, opts) {
-  log('<<<<start:' + email)
   return new Promise(function (resolve, reject) {
     email = validateEmail(email);
     email ? resolve(email.split('@')[1]) : reject();
@@ -75,9 +74,10 @@ module.exports = function (email, opts) {
         log('trying:' + address)
         var socket = net.createConnection(25, address);
         socket.setTimeout(options.timeout, function () {
-          log('timeout after ' + options.timeout + ' for ' + address)
+          var errorMessage = 'timeout after ' + options.timeout + ' for ' + address
+          log(errorMessage)
           socket.destroy();
-          resolve(false);
+          reject( new Error(errorMessage));
         });
         socket.on('data', function (data) {
           log(data.toString())
@@ -91,7 +91,7 @@ module.exports = function (email, opts) {
             });
           } else {
             socket.destroy();
-            resolve(true);
+            resolve({status: true, error: null});
           }
         });
         socket.on('error', function (err) {
