@@ -58,7 +58,6 @@ module.exports = function (email, opts) {
         timeout: opts.timeout || 5000
       };
       options.host = opts.host || options.from.split('@')[1];
-      var step = 0;
       const COMM = [
         'helo ' + options.host + '\n',
         'mail from:<' + options.from + '>\n',
@@ -68,6 +67,7 @@ module.exports = function (email, opts) {
       for(var i = 0; i < addresses.length; i++){
         var address = addresses[i]
         var pFunc = ((address) => new Promise(function (resolve, reject) {
+          var step = 0;
           log('trying:' + address)
           var socket = net.createConnection(25, address);
           socket.setTimeout(options.timeout, function () {
