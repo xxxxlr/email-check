@@ -6,7 +6,7 @@ var promisify = require('js-promisify');
 
 // Helper to validate email based on regex
 const EMAIL_REGEX = /^([\w-]+(?:\.[\w-]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
-const LOG_FLAG = false
+const LOG_FLAG = true
 
 function validateEmail (email) {
   if (typeof email === 'string' && email.length > 5 && email.length < 61 && EMAIL_REGEX.test(email)) {
@@ -20,7 +20,11 @@ function validateEmail (email) {
 module.exports = function (email, opts) {
   return new Promise(function (resolve, reject) {
     email = validateEmail(email);
-    email ? resolve(email.split('@')[1]) : reject({status: false, mx: null, error: 'email format is invalid'});
+    if(email){
+      resolve(email.split('@')[1]) 
+    } else {
+      reject({status: false, mx: null, error: 'email format is invalid'});
+    }
   })
   .then(function (domain) {
     return promisify(dns.resolveMx, [domain]);
@@ -80,6 +84,11 @@ module.exports = function (email, opts) {
           socket.destroy();
           reject( new Error(errorMessage));
         });
+        // NOTE: some server will close on connection
+        socket.on('close', function(data){
+          socket.destroy();
+          reject(new Error(`Server ${MXAddress} closed:` + data.toString()));
+        })
         socket.on('data', function (data) {
           log(data.toString())
           if (data.toString()[0] !== '2') {
@@ -127,7 +136,7 @@ module.exports = function (email, opts) {
   })
   .catch(function (err) {
     if (err) {
-      return err;
+      return {status: false, mx: null, error: err};
     } else {
       throw err;
     }
