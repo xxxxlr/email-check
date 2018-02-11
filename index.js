@@ -20,17 +20,17 @@ function validateEmail (email) {
 module.exports = function (email, opts) {
   return new Promise(function (resolve, reject) {
     email = validateEmail(email);
-    email ? resolve(email.split('@')[1]) : reject();
+    email ? resolve(email.split('@')[1]) : reject({status: false, mx: null, error: 'email format is invalid'});
   })
   .then(function (domain) {
     return promisify(dns.resolveMx, [domain]);
   })
   .catch(function (err) {
-    throw(new Error('wrong'));
+    throw(err);
   })
   .then(function (addresses) {
     if (addresses.length === 1) {
-      return addresses[0].exchange;
+      return [addresses[0].exchange];
     } else {
       // Find the lowest priority mail server
       // var lowestPriorityIndex = 0;
@@ -43,6 +43,7 @@ module.exports = function (email, opts) {
       //   }
       // }
       // return addresses[lowestPriorityIndex].exchange;
+
       // Get all addresses's exchanges
       var exchanges = []
       for (var i = 0; i < addresses.length; i++) {
@@ -51,7 +52,7 @@ module.exports = function (email, opts) {
       return exchanges
     }
   })
-  .then(function (addresses) {
+  .then(function (MXAddresses) {
     opts = opts || {};
     var options = {
       from: validateEmail(opts.from) || email,
@@ -66,15 +67,15 @@ module.exports = function (email, opts) {
       'RCPT TO: <' + email + '>' + end
     ];
     var ps = []
-    for(var i = 0; i < addresses.length; i++){
-      var address = addresses[i]
-      var pFunc = ((address) => new Promise(function (resolve, reject) {
+    for(var i = 0; i < MXAddresses.length; i++){
+      var MXAddress = MXAddresses[i]
+      var pFunc = ((MXAddress) => new Promise(function (resolve, reject) {
         var step = 0;
         
-        log('trying:' + address)
-        var socket = net.createConnection(25, address);
+        log('Checking MX:' + MXAddress)
+        var socket = net.createConnection(25, MXAddress);
         socket.setTimeout(options.timeout, function () {
-          var errorMessage = 'timeout after ' + options.timeout + ' for ' + address
+          var errorMessage = 'timeout after ' + options.timeout + ' for ' + MXAddress
           log(errorMessage)
           socket.destroy();
           reject( new Error(errorMessage));
@@ -91,7 +92,7 @@ module.exports = function (email, opts) {
             });
           } else {
             socket.destroy();
-            resolve({status: true, error: null});
+            resolve({status: true, mx: MXAddress, error: null});
           }
         });
         socket.on('error', function (err) {
@@ -104,7 +105,7 @@ module.exports = function (email, opts) {
             reject(err);
           }
         })
-      })).bind(this, address)
+      })).bind(this, MXAddress)
 
       ps.push( pFunc )
     }
@@ -112,21 +113,21 @@ module.exports = function (email, opts) {
     // Check against all exchange servers until find a match or return error when all servers say it invalid 
     return ps.reduce(function(prev, current, index){
       return prev.then(function(res){
-        if(res.status === true){
+        if(res['status'] === true){
           log(index + '->skip current')
-          return Promise.resolve({status: true, error: null})
+          return Promise.resolve({status: true, mx: res['mx'], error: null})
         }
         log(index + '->checking current')
         return current()
       }).catch(function(err){
-        return Promise.resolve({status: false, error: err})
+        return Promise.resolve({status: false, mx: null, error: err})
       })
-    }, Promise.resolve({status: false, error: null}));
+    }, Promise.resolve({status: false, mx: null, error: null}));
     
   })
   .catch(function (err) {
-    if (err.message === 'wrong') {
-      return false;
+    if (err) {
+      return err;
     } else {
       throw err;
     }
