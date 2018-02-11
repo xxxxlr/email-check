@@ -6,7 +6,7 @@ var promisify = require('js-promisify');
 
 // Helper to validate email based on regex
 const EMAIL_REGEX = /^([\w-]+(?:\.[\w-]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
-const LOG_FLAG = true
+const LOG_FLAG = false
 
 function validateEmail (email) {
   if (typeof email === 'string' && email.length > 5 && email.length < 61 && EMAIL_REGEX.test(email)) {
