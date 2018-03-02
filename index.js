@@ -65,18 +65,18 @@ module.exports = {
             var errorMessage = 'timeout after ' + options.timeout + ' for ' + address
             log(errorMessage)
             socket.destroy();
-            reject( new Error(errorMessage));
+            reject({mx: address, error: new Error(errorMessage)});
           });
           socket.on('close', function(data){
             socket.destroy();
-            reject(new Error(`Server ${address} closed:` + data.toString()));
+            reject({mx: address, error: new Error(`Server ${address} closed:` + data.toString())});
           })
           socket.on('data', function (data) {
             let response = data.toString()
             log(response)
             if (response[0] !== '2') {
               socket.destroy();
-              reject(new Error('Not 2xx return in last message:' + response));
+              reject({mx: address, error: new Error('Not 2xx return in last message:' + response)});
             }
             if (step < 3) {
               socket.write(COMM[step], function () {
@@ -92,16 +92,16 @@ module.exports = {
             log(JSON.stringify(err))
             socket.destroy();
             if (err.code === 'ECONNRESET') {
-              reject(new Error('refuse'));
+              reject({mx: address, error: new Error('refuse')});
             } else {
-              reject(err);
+              reject({mx: address, error: err});
             }
           })
         });
       })
       .catch(function (err) {
         if (err) {
-          return {status: false, mx: null, error: err};
+          return {status: false, mx: err['mx'], error: err['error']};
         } else {
           throw err;
         }
