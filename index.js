@@ -26,9 +26,6 @@ module.exports = {
       .then(function (domain) {
         return promisify(dns.resolveMx, [domain]);
       })
-      .catch(function (err) {
-        throw(new Error('wrong'));
-      })
       .then(function (addresses) {
         if (addresses.length === 1) {
           return addresses[0].exchange;
