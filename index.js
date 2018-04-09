@@ -23,8 +23,22 @@ module.exports = {
       email = validateEmail(email);
       email ? resolve(email.split('@')[1]) : reject({status: false, mx: null, error: 'email format is invalid'});
     })
+      .catch(function (err) {
+        if (err) {
+          return { status: false, mx: err['mx'], error: err['error'] };
+        } else {
+          throw err;
+        }
+      })
       .then(function (domain) {
         return promisify(dns.resolveMx, [domain]);
+      })
+      .catch(function (err) {
+        if (err) {
+          return {status: false, mx: err['mx'], error: err['message']};
+        } else {
+          throw err;
+        }
       })
       .then(function (addresses) {
         if (addresses.length === 1) {
@@ -98,7 +112,7 @@ module.exports = {
       })
       .catch(function (err) {
         if (err) {
-          return {status: false, mx: err['mx'], error: err['error']};
+          return {status: false, mx: err['mx'], error: err['error'] || err['message']};
         } else {
           throw err;
         }
